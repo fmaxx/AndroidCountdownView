@@ -25,12 +25,12 @@ android {
 }
 
 dependencies {
-    implementation(libs.coroutines)
+    implementation(libs.kotlinxCoroutinesAndroid)
     implementation(libs.coreKtx)
     implementation(libs.appCompat)
     implementation(libs.material)
     implementation(libs.constraintlayout)
-    testImplementation(libs.bundles.test.deps)
-    androidTestImplementation(libs.bundles.android.test.deps)
+    testImplementation(libs.bundles.test)
+    androidTestImplementation(libs.bundles.androidTest)
 }
 
