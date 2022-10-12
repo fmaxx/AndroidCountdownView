@@ -1,5 +1,6 @@
 package com.github.fmaxx.androidCountdownView.core
 
+import androidx.annotation.VisibleForTesting
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +14,7 @@ import java.util.concurrent.TimeUnit.*
  */
 class CountdownGenerator(unit: TimeUnit,
                          private val duration: Duration,
-                         dispatcher: CoroutineDispatcher = Dispatchers.Default) {
+                         dispatcher: CoroutineDispatcher = Dispatchers.Main.immediate) {
     private var _progress = 0f
     private var totalMilliseconds = duration.toMillis()
     private var currentMilliseconds = 0L
@@ -22,7 +23,7 @@ class CountdownGenerator(unit: TimeUnit,
     val isPlaying get() = _isPlaying
     private val _tick = MutableStateFlow<CountdownEvent>(Start(getCurrentInfo()))
     private var job: Job? = null
-    private val scope = CoroutineScope(dispatcher)
+    private val scope = CoroutineScope(SupervisorJob() + dispatcher)
     private var lastTimeMilliseconds = 0L
     val tick: StateFlow<CountdownEvent> get() = _tick
     val progress get() = _progress
@@ -47,7 +48,7 @@ class CountdownGenerator(unit: TimeUnit,
             when (unit) {
                 NANOSECONDS,
                 MICROSECONDS,
-                MILLISECONDS -> 1
+                MILLISECONDS -> 10
                 SECONDS -> 1_000
                 MINUTES -> 1_000 * 60
                 HOURS -> 1_000 * 60 * 60
@@ -84,9 +85,34 @@ class CountdownGenerator(unit: TimeUnit,
         job = null
     }
 
+    @VisibleForTesting
+    internal fun tickEvent(progress: Float): Boolean {
+        if (_progress > 1) {
+            return false
+        }
+        scope.launch {
+            val event = when {
+                progress == 0f -> Start(getCurrentInfo())
+                progress > 0f && progress < 1f -> Progress(getCurrentInfo())
+                else -> Finish(getCurrentInfo())
+            }
+
+//            currentMilliseconds += (systemTimeMilliseconds - lastTimeMilliseconds)
+//            _progress = currentMilliseconds.toFloat() / totalMilliseconds.toFloat()
+//            lastTimeMilliseconds = systemTimeMilliseconds
+
+            println("event: $event")
+            _tick.tryEmit(event)
+//            _tick.value = event
+        }
+        return true
+    }
+
     private fun startJob() {
         job = scope.launch {
             while (_isPlaying && isActive) {
+
+
                 val event = when {
                     _progress == 0f -> Start(getCurrentInfo())
                     _progress > 0f && _progress < 1f -> Progress(getCurrentInfo())
@@ -102,7 +128,13 @@ class CountdownGenerator(unit: TimeUnit,
 //                println("currentMilliseconds: $currentMilliseconds")
 //                println("delta: ${(systemTimeMilliseconds - lastTimeMilliseconds)}")
 //                println("-----------------")
-                _tick.tryEmit(event)
+
+                launch {
+//                    _tick.tryEmit(event)
+                    _tick.value = event
+                }
+
+
                 currentMilliseconds += (systemTimeMilliseconds - lastTimeMilliseconds)
                 _progress = currentMilliseconds.toFloat() / totalMilliseconds.toFloat()
                 lastTimeMilliseconds = systemTimeMilliseconds

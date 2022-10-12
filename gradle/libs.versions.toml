@@ -9,6 +9,7 @@ coreKtx = "androidx.core:core-ktx:1.9.0"
 material = "com.google.android.material:material:1.6.1"
 appCompat = "androidx.appcompat:appcompat:1.5.1"
 constraintlayout = "androidx.constraintlayout:constraintlayout:2.1.4"
+lifecycleViewmodelKtx = "androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.0"
 kotlinxCoroutinesAndroid = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinxCoroutinesTest = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 junit = { module ="androidx.test.ext:junit" , version.ref = "junit" }
