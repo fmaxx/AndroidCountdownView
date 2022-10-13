@@ -1,17 +1,18 @@
 package com.github.fmaxx.androidCountdownView.core
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.test.*
-import org.hamcrest.CoreMatchers
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.time.Duration
 import java.util.concurrent.TimeUnit
+import java.util.logging.Logger
 
 /**
  * Created by Maxim Firsov on 11.10.2022.
@@ -55,97 +56,65 @@ internal class CountdownGeneratorTest {
 
     @Test
     fun exampleTest() = runBlocking {
-        val duration = 3_000L
+        val duration = 1_000L
+        val results = mutableListOf<CountdownEvent>()
         launch {
             val generator = generator(duration)
             generator.start()
+            generator.tick.toList(results)
             delay(duration + 100)
         }.join()
+        assertTrue(results.isNotEmpty())
     }
 
     @Test
     fun flowTest() = runTest {
-        val dispatcher = UnconfinedTestDispatcher(testScheduler)
-        val viewModel = MyViewModel(dispatcher)
-        val results = mutableListOf<Int>()
-        val job = launch(dispatcher) { viewModel.numbers.toList(results) }
-
-        for(i in 0..1000){
-            viewModel.addNumber(i)
-        }
-
-//        viewModel.addNumber(8)
-        runCurrent() // Important
-
-        assertEquals(1001, results.size)
-//        assertThat(results).isEqualTo(listOf(0, 5, 8))
-        job.cancel() // Important
-
-        /*val dispatcher = UnconfinedTestDispatcher(testScheduler)
         val results = mutableListOf<CountdownEvent>()
-        val duration = 200L
-        val generator = generator(duration)
-        val job = launch(dispatcher) {
+        val millis = 2_000L
+        val duration = Duration.ofMillis(millis)
+        val generator = generator(millis)
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
             generator.start()
-            runCurrent()
-            generator.tick.toList(results)
-            delay(duration + 100)
+            generator.tick.stateIn(this, SharingStarted.Eagerly, null).filterNotNull().collect{
+                println("added: $it")
+                results.add(it)
+                delay(millis + 100)
+            }
         }
-
-
-        //Verify
-        assertThat(results.first(), CoreMatchers.instanceOf(Start::class.java))
-        assertTrue(results.count { it is Start } == 1)
-        val ttt = results.count { it is Finish }
-        println("ttt: $ttt")
-        assertTrue(results.count { it is Finish } == 1)
-//        assertEquals(listOf(0, 1, 2, 3, 4, 5), results)
-        job.cancel()*/
+        runCurrent()
+        job.cancel()
+        assertTrue(results.isNotEmpty())
+        println("~~~ results: $results")
     }
 
     @Test
     fun flowTest2() = runTest {
-        val dispatcher = UnconfinedTestDispatcher(testScheduler)
-        val viewModel = MyViewModel(dispatcher)
+        data class TickEventCase(val progress: Float, val expected: CountdownEvent)
         val results = mutableListOf<CountdownEvent>()
-        val duration = 20_000L
-        val generator = generator(duration)
-        val job = launch(dispatcher) {
-//            generator.start()
+        val millis = 20_000L
+        val duration = Duration.ofMillis(millis)
+        val generator = generator(millis)
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
             generator.tick.toList(results)
         }
-
-        generator.tickEvent(0f)
-        generator.tickEvent(0.1f)
-        generator.tickEvent(0.5f)
-        generator.tickEvent(1f)
-
+        val input = listOf(
+                TickEventCase(0f, Start(CountdownInfo(0f, total = duration))),
+                TickEventCase(0.1f, Progress(CountdownInfo(0.1f, total = duration))),
+                TickEventCase(0.8f, Progress(CountdownInfo(0.8f, total = duration))),
+                TickEventCase(1f, Finish(CountdownInfo(1f, total = duration))),
+        )
+        input.forEach {
+            generator.tickProgress(it.progress)
+        }
         runCurrent() // Important
 
-//        assertEquals(1001, results.size)
-//        assertThat(results).isEqualTo(listOf(0, 5, 8))
-        job.cancel() // Important
-
-        /*val dispatcher = UnconfinedTestDispatcher(testScheduler)
-        val results = mutableListOf<CountdownEvent>()
-
-        val generator = generator(duration)
-        val job = launch(dispatcher) {
-            generator.start()
-            runCurrent()
-            generator.tick.toList(results)
-            delay(duration + 100)
+        assert(Start(CountdownInfo(0f, total = Duration.ofMillis(millis))) ==
+                Start(CountdownInfo(0f, total = Duration.ofMillis(millis))))
+        assertEquals(input.size, results.size)
+        results.forEachIndexed { index, event ->
+            assert(input[index].expected == event)
         }
-
-
-        //Verify
-        assertThat(results.first(), CoreMatchers.instanceOf(Start::class.java))
-        assertTrue(results.count { it is Start } == 1)
-        val ttt = results.count { it is Finish }
-        println("ttt: $ttt")
-        assertTrue(results.count { it is Finish } == 1)
-//        assertEquals(listOf(0, 1, 2, 3, 4, 5), results)
-        job.cancel()*/
+        job.cancel() // Important
     }
 
     private fun generator(ms: Long) =

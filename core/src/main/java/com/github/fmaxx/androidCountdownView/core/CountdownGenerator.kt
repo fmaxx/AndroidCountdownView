@@ -48,18 +48,23 @@ class CountdownGenerator(unit: TimeUnit,
             when (unit) {
                 NANOSECONDS,
                 MICROSECONDS,
-                MILLISECONDS -> 10
+                MILLISECONDS -> 100
                 SECONDS -> 1_000
                 MINUTES -> 1_000 * 60
                 HOURS -> 1_000 * 60 * 60
                 DAYS -> 1_000 * 60 * 60 * 24
             }
 
-    private fun getCurrentInfo(): CountdownInfo =
+    private fun getCurrentInfo(progress: Float, current: Long) =
             CountdownInfo(
-                    progress = _progress,
-                    current = Duration.ofMillis(currentMilliseconds),
+                    progress = progress,
+                    current = Duration.ofMillis(current),
                     total = duration)
+
+    private fun getCurrentInfo() =
+            getCurrentInfo(
+                    progress = _progress,
+                    current = currentMilliseconds)
 
     fun pause() {
         if (!_isPlaying) return
@@ -86,24 +91,25 @@ class CountdownGenerator(unit: TimeUnit,
     }
 
     @VisibleForTesting
-    internal fun tickEvent(progress: Float): Boolean {
-        if (_progress > 1) {
+    internal suspend fun tickProgress(progress: Float): Boolean {
+        if (progress > 1) {
             return false
         }
         scope.launch {
+            val info = getCurrentInfo(progress, currentMilliseconds)
             val event = when {
-                progress == 0f -> Start(getCurrentInfo())
-                progress > 0f && progress < 1f -> Progress(getCurrentInfo())
-                else -> Finish(getCurrentInfo())
+                progress == 0f -> Start(info)
+                progress > 0f && progress < 1f -> Progress(info)
+                else -> Finish(info)
             }
 
-//            currentMilliseconds += (systemTimeMilliseconds - lastTimeMilliseconds)
-//            _progress = currentMilliseconds.toFloat() / totalMilliseconds.toFloat()
-//            lastTimeMilliseconds = systemTimeMilliseconds
+            currentMilliseconds += (systemTimeMilliseconds - lastTimeMilliseconds)
+            _progress = currentMilliseconds.toFloat() / totalMilliseconds.toFloat()
+            lastTimeMilliseconds = systemTimeMilliseconds
 
             println("event: $event")
-            _tick.tryEmit(event)
-//            _tick.value = event
+//            _tick.emit(event)
+            _tick.value = event
         }
         return true
     }
@@ -113,32 +119,32 @@ class CountdownGenerator(unit: TimeUnit,
             while (_isPlaying && isActive) {
 
 
-                val event = when {
-                    _progress == 0f -> Start(getCurrentInfo())
-                    _progress > 0f && _progress < 1f -> Progress(getCurrentInfo())
-                    else -> Finish(getCurrentInfo())
-                }
+//                val event = when {
+//                    _progress == 0f -> Start(getCurrentInfo())
+//                    _progress > 0f && _progress < 1f -> Progress(getCurrentInfo())
+//                    else -> Finish(getCurrentInfo())
+//                }
 
                 if (_progress > 1) {
                     cancelJob()
                     return@launch
                 }
 
-                println("event: $event")
+//                println("event: $event")
 //                println("currentMilliseconds: $currentMilliseconds")
 //                println("delta: ${(systemTimeMilliseconds - lastTimeMilliseconds)}")
 //                println("-----------------")
-
-                launch {
-//                    _tick.tryEmit(event)
-                    _tick.value = event
-                }
-
-
+                tickProgress(_progress)
+//                launch {
+////                    _tick.tryEmit(event)
+//                    _tick.value = event
+//                }
                 currentMilliseconds += (systemTimeMilliseconds - lastTimeMilliseconds)
                 _progress = currentMilliseconds.toFloat() / totalMilliseconds.toFloat()
                 lastTimeMilliseconds = systemTimeMilliseconds
                 delay(delayMilliseconds)
+//                delay(delayMilliseconds)
+
             }
         }
     }
@@ -151,5 +157,9 @@ class CountdownGenerator(unit: TimeUnit,
     private val systemTimeMilliseconds get() = System.currentTimeMillis()
 }
 
-data class CountdownInfo(val progress: Float, val current: Duration, val total: Duration)
+data class CountdownInfo(
+        val progress: Float,
+        val current: Duration = Duration.ofMillis(0),
+        val total: Duration = Duration.ofMillis(0)
+)
 
