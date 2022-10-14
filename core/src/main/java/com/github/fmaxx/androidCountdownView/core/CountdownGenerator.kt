@@ -108,8 +108,8 @@ class CountdownGenerator(unit: TimeUnit,
             lastTimeMilliseconds = systemTimeMilliseconds
 
             println("event: $event")
-//            _tick.emit(event)
-            _tick.value = event
+            _tick.emit(event)
+//            _tick.value = event
         }
         return true
     }
@@ -117,7 +117,7 @@ class CountdownGenerator(unit: TimeUnit,
     private fun startJob() {
         job = scope.launch {
             while (_isPlaying && isActive) {
-
+                delay(delayMilliseconds)
 
 //                val event = when {
 //                    _progress == 0f -> Start(getCurrentInfo())
@@ -125,16 +125,19 @@ class CountdownGenerator(unit: TimeUnit,
 //                    else -> Finish(getCurrentInfo())
 //                }
 
+                println("progress: $_progress, delta: ${(systemTimeMilliseconds - lastTimeMilliseconds)}")
                 if (_progress > 1) {
                     cancelJob()
                     return@launch
                 }
 
+
+
 //                println("event: $event")
 //                println("currentMilliseconds: $currentMilliseconds")
 //                println("delta: ${(systemTimeMilliseconds - lastTimeMilliseconds)}")
 //                println("-----------------")
-                tickProgress(_progress)
+//                tickProgress(_progress)
 //                launch {
 ////                    _tick.tryEmit(event)
 //                    _tick.value = event
@@ -142,7 +145,7 @@ class CountdownGenerator(unit: TimeUnit,
                 currentMilliseconds += (systemTimeMilliseconds - lastTimeMilliseconds)
                 _progress = currentMilliseconds.toFloat() / totalMilliseconds.toFloat()
                 lastTimeMilliseconds = systemTimeMilliseconds
-                delay(delayMilliseconds)
+
 //                delay(delayMilliseconds)
 
             }
