@@ -1,19 +1,19 @@
-package com.github.fmaxx.androidCountdownView.core.stopWatch
+package com.github.fmaxx.stopWatch.domain
 
 /**
  * Created by Maxim Firsov on 14.10.2022.
  * firsoffmaxim@gmail.com
  */
 class StopwatchStateCalculator(
-    private val timestampProvider: TimestampProvider,
-    private val elapsedTimeCalculator: ElapsedTimeCalculator
+        private val timestampProvider: TimestampProvider,
+        private val elapsedTimeCalculator: ElapsedTimeCalculator
 ) {
     fun calculateRunningState(oldState: StopwatchState): Running =
         when (oldState) {
             is Paused -> {
                 Running(
-                    startTime = timestampProvider.milliseconds,
-                    elapsedTime = oldState.elapsedTime
+                        startTime = timestampProvider.milliseconds,
+                        elapsedTime = oldState.elapsedTime
                 )
             }
             is Running -> oldState

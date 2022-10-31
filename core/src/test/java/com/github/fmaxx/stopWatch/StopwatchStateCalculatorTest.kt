@@ -1,5 +1,7 @@
-package com.github.fmaxx.androidCountdownView.core.stopWatch
+package com.github.fmaxx.stopWatch
 
+import com.github.fmaxx.stopWatch.*
+import com.github.fmaxx.stopWatch.domain.*
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.BeforeEach
@@ -17,13 +19,19 @@ class StopwatchStateCalculatorTest {
 
     private val timestampProvider: TimestampProvider = mockk()
     private val elapsedTimeCalculator = ElapsedTimeCalculator(timestampProvider)
-    private lateinit var systemUnderTest: StopwatchStateCalculator
+    private var stopwatchStateCalculator: StopwatchStateCalculator = StopwatchStateCalculator(
+            timestampProvider = timestampProvider,
+            elapsedTimeCalculator = elapsedTimeCalculator
+    )
+    private val timestampMillisecondsFormatter = TimestampMillisecondsFormatter()
+    private lateinit var systemUnderTest: StopwatchStateHolder
 
     @BeforeEach
     fun setUp() {
-        systemUnderTest = StopwatchStateCalculator(
-                timestampProvider = timestampProvider,
-                elapsedTimeCalculator = elapsedTimeCalculator
+        systemUnderTest = StopwatchStateHolder(
+                stateCalculator = stopwatchStateCalculator,
+                timeCalculator = elapsedTimeCalculator,
+                formatter = timestampMillisecondsFormatter
         )
     }
 
@@ -35,9 +43,7 @@ class StopwatchStateCalculatorTest {
             expectedState: Running,
     ) {
         every { timestampProvider.milliseconds } returns startingTimestamp
-
-        val result = systemUnderTest.calculateRunningState(oldState)
-
+        val result = stopwatchStateCalculator.calculateRunningState(oldState)
         expectThat(result).isEqualTo(expectedState)
     }
 
@@ -90,7 +96,7 @@ class StopwatchStateCalculatorTest {
     ) {
         every { timestampProvider.milliseconds } returns currentTimestamp
 
-        val result = systemUnderTest.calculatePausedState(oldState)
+        val result = stopwatchStateCalculator.calculatePausedState(oldState)
 
         expectThat(result).isEqualTo(expectedState)
     }
@@ -158,12 +164,7 @@ class StopwatchStateCalculatorTest {
     }
 
     @Test
-    fun oloaoao(){
-        assert(true)
-    }
-
-    @Test
-    fun `Article example test`() {
+    fun `timestampProvider test`() {
         val timestampProvider: TimestampProvider = mockk()
         val elapsedTimeCalculator = ElapsedTimeCalculator(timestampProvider)
         val stopwatchStateCalculator = StopwatchStateCalculator(

@@ -31,6 +31,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.coroutines)
     implementation(libs.kotlinxCoroutinesAndroid)
     implementation(libs.coreKtx)
     implementation(libs.appCompat)

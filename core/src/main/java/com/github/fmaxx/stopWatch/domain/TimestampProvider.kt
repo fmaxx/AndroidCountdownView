@@ -1,4 +1,4 @@
-package com.github.fmaxx.androidCountdownView.core.stopWatch
+package com.github.fmaxx.stopWatch.domain
 
 /**
  * Created by Maxim Firsov on 14.10.2022.
