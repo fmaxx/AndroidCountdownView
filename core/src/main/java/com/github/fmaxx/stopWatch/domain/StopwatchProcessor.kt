@@ -10,7 +10,13 @@ import kotlinx.coroutines.flow.StateFlow
  */
 class StopwatchProcessor(
         private val stateHolder: StopwatchStateHolder,
-        private val scope: CoroutineScope) {
+        private val scope: CoroutineScope,
+        private val tickDelayMilliseconds: Long = 20
+) {
+
+    init {
+        require(tickDelayMilliseconds > 0)
+    }
 
     private var job: Job? = null
     private val _ticker = MutableStateFlow("")
@@ -25,7 +31,7 @@ class StopwatchProcessor(
         scope.launch {
             while (isActive) {
                 _ticker.value = stateHolder.timeRepresentation
-                delay(20)
+                delay(tickDelayMilliseconds)
             }
         }
     }
